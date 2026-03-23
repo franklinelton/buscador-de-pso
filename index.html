@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Danone - Sistema de PSO</title>
+<meta name="description" content="Danone Brasil · Sistema de Download de Imagens e informações de Produtos">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --blue: #009BDE; --blue-dark: #0072A3; --blue-light: #E6F6FD; --blue-mid: #CCeefa;
+    --red: #E2001A; --gray-bg: #F4F6F8; --gray-border: #DDE2E8; --gray-text: #6B7280;
+    --text: #1A2332; --white: #ffffff; --radius: 12px; --shadow: 0 2px 20px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Open Sans', sans-serif; background: var(--gray-bg); min-height: 100vh; color: var(--text); }
+  .header { background: var(--white); border-bottom: 3px solid var(--blue); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .header-inner { max-width: 960px; margin: 0 auto; padding: 20px 24px; display: flex; align-items: center; gap: 20px; }
+  .header-logo { width: 72px; height: 72px; object-fit: contain; flex-shrink: 0; }
+  .header-text h1 { font-family: 'Montserrat', sans-serif; font-size: 20px; font-weight: 700; color: var(--blue-dark); line-height: 1.2; }
+  .header-text p { font-size: 13px; color: var(--gray-text); margin-top: 3px; }
+  .header-badge { margin-left: auto; background: var(--blue-light); color: var(--blue-dark); font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--blue-mid); white-space: nowrap; flex-shrink: 0; }
+  .main { max-width: 960px; margin: 0 auto; padding: 28px 24px 48px; display: flex; flex-direction: column; gap: 20px; }
+  .instrucoes { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 24px; border-left: 4px solid var(--blue); }
+  .instrucoes h2 { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700; color: var(--blue-dark); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .step { display: flex; align-items: flex-start; gap: 10px; }
+  .step-num { width: 24px; height: 24px; background: var(--blue); color: white; border-radius: 50%; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step p { font-size: 13px; color: var(--gray-text); line-height: 1.5; }
+  .step strong { color: var(--text); font-weight: 600; }
+  .dica-box { margin-top: 14px; padding: 10px 14px; background: #FFF8E1; border-left: 3px solid #F59E0B; border-radius: 6px; font-size: 12.5px; color: #78350F; line-height: 1.6; }
+
+  /* Search */
+  .search-card { position: relative; background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; }
+  .search-card label { font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 600; color: var(--text); display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .search-row { display: flex; gap: 10px; }
+  .search-row input { flex: 1; padding: 12px 16px; font-size: 16px; font-family: 'Open Sans', sans-serif; border: 2px solid var(--gray-border); border-radius: 8px; outline: none; transition: border-color .2s; color: var(--text); }
+  .search-row input:focus { border-color: var(--blue); }
+  input[type=number] { width: 90px; padding: 8px 10px; font-size: 14px; border: 1.5px solid var(--gray-border); border-radius: 6px; outline: none; text-align: center; font-family: 'Open Sans', sans-serif; }
+  input[type=number]:focus { border-color: var(--blue); }
+  .btn-buscar { padding: 12px 24px; background: var(--blue); color: white; border: none; border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s; white-space: nowrap; }
+  .btn-buscar:hover { background: var(--blue-dark); }
+  .btn-buscar:disabled { background: #aaa; cursor: not-allowed; }
+  #status { margin-top: 14px; font-size: 14px; color: var(--gray-text); min-height: 20px; }
+  #status.erro { color: var(--red); }
+  #status.ok { color: #15803d; }
+
+  /* Autocomplete */
+  .autocomplete-lista { position: absolute; left: 24px; right: 24px; background: var(--white); border: 1.5px solid var(--blue); border-top: none; border-radius: 0 0 8px 8px; max-height: 280px; overflow-y: auto; z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+  .autocomplete-item { padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--gray-border); transition: background .15s; }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:hover, .autocomplete-item.ativo { background: var(--blue-light); }
+  .autocomplete-nome { font-size: 14px; color: var(--text); font-weight: 500; }
+  .autocomplete-sub { font-size: 12px; color: var(--gray-text); margin-top: 2px; }
+  .autocomplete-ean { font-family: 'Montserrat', sans-serif; font-size: 11px; color: var(--blue-dark); font-weight: 600; }
+  .autocomplete-vazio { padding: 12px 16px; font-size: 13px; color: var(--gray-text); text-align: center; }
+
+  /* Resize + Formato */
+  .resize-box { display: none; background: var(--blue-light); border-radius: 8px; border: 1px solid var(--blue-mid); padding: 16px; margin-top: 16px; }
+  .resize-box > p { font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 600; color: var(--blue-dark); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .resize-grupo { display: flex; flex-direction: column; gap: 8px; }
+  .resize-linha { display: flex; align-items: center; gap: 10px; }
+  .resize-linha > span:first-child { font-size: 13px; color: var(--gray-text); min-width: 52px; }
+  .resize-linha .px-label { font-size: 13px; color: var(--gray-text); }
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+  .check-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--blue); }
+  .check-row label { font-size: 13px; color: var(--gray-text); cursor: pointer; }
+  .resize-modo-hint { font-size: 11.5px; color: var(--blue-dark); background: rgba(0,155,222,0.08); border-radius: 4px; padding: 6px 10px; margin-top: 6px; line-height: 1.5; }
+  .formato-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--blue-mid); flex-wrap: wrap; }
+  .formato-row > span { font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 600; color: var(--blue-dark); }
+  .formato-select { padding: 7px 12px; font-size: 13px; font-family: 'Open Sans', sans-serif; border: 1.5px solid var(--blue-mid); border-radius: 6px; background: var(--white); color: var(--text); outline: none; cursor: pointer; }
+  .formato-select:focus { border-color: var(--blue); }
+
+  /* Produto info card */
+  .produto-info { display: none; background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; }
+  .produto-info-header { margin-bottom: 20px; }
+  .produto-ean-badge { display: inline-block; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 600; color: var(--blue-dark); background: var(--blue-light); border: 1px solid var(--blue-mid); padding: 4px 10px; border-radius: 20px; margin-bottom: 12px; }
+  .produto-campos { display: flex; flex-direction: column; gap: 10px; }
+  .campo { background: var(--gray-bg); border-radius: 8px; border: 1px solid var(--gray-border); overflow: hidden; }
+  .campo-label { font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; color: var(--blue-dark); text-transform: uppercase; letter-spacing: 0.6px; padding: 10px 14px 4px; }
+  .campo-valor { font-size: 13px; color: var(--text); line-height: 1.6; padding: 0 14px 12px; white-space: pre-wrap; word-break: break-word; }
+  .campo-titulo-completo .campo-valor { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 600; color: var(--text); }
+  .campo-titulo-reduzido .campo-valor { font-size: 13px; color: var(--gray-text); }
+  .campo-expandivel .campo-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; user-select: none; }
+  .campo-expandivel .campo-header:hover { background: var(--blue-light); }
+  .campo-expandivel .campo-label { padding: 0; }
+  .campo-seta { font-size: 12px; color: var(--blue-dark); font-family: 'Montserrat', sans-serif; font-weight: 600; transition: transform .2s; display: inline-block; }
+  .campo-expandivel.aberto .campo-seta { transform: rotate(180deg); }
+  .campo-expandivel .campo-valor { display: none; border-top: 1px solid var(--gray-border); padding: 12px 14px; }
+  .campo-expandivel.aberto .campo-valor { display: block; }
+
+  /* Results */
+  .results-card { display: none; background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; }
+  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+  .results-title { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.4px; }
+  .results-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn-select-all { padding: 8px 16px; background: var(--gray-bg); color: var(--text); border: 1.5px solid var(--gray-border); border-radius: 6px; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s; }
+  .btn-select-all:hover { background: var(--gray-border); }
+  .btn-baixar-sel { padding: 8px 16px; background: var(--blue); color: white; border: none; border-radius: 6px; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .2s; display: none; }
+  .btn-baixar-sel:hover { background: var(--blue-dark); }
+  .btn-baixar-sel:disabled { background: #aaa; cursor: not-allowed; }
+  .btn-baixar-todos { padding: 8px 16px; background: #15803d; color: white; border: none; border-radius: 6px; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .2s; }
+  .btn-baixar-todos:hover { background: #166534; }
+  .btn-baixar-todos:disabled { background: #aaa; cursor: not-allowed; }
+  .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .img-card { background: var(--gray-bg); border-radius: 10px; border: 2px solid var(--gray-border); overflow: hidden; display: flex; flex-direction: column; transition: border-color .2s, box-shadow .2s; cursor: pointer; position: relative; }
+  .img-card:hover { border-color: var(--blue); box-shadow: 0 2px 12px rgba(0,155,222,0.15); }
+  .img-card.selecionada { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,155,222,0.25); }
+  .img-checkbox { position: absolute; top: 8px; left: 8px; width: 20px; height: 20px; z-index: 2; accent-color: var(--blue); cursor: pointer; }
+  .img-wrap { aspect-ratio: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; background: #e5e7eb; }
+  .img-wrap:hover .overlay { opacity: 1; }
+  .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .2s; }
+  .overlay svg { width: 28px; height: 28px; fill: white; }
+  .img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .img-wrap .loader { font-size: 11px; color: #aaa; }
+  .img-info { padding: 8px 10px; border-top: 1px solid var(--gray-border); background: var(--white); }
+  .img-nome { font-size: 11px; color: var(--gray-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .img-dim { font-size: 11px; color: #9ca3af; margin-top: 2px; font-family: 'Montserrat', sans-serif; font-weight: 500; }
+  .img-actions { padding: 8px 10px; background: var(--white); }
+  .btn-dl-individual { width: 100%; padding: 6px; background: var(--blue-light); color: var(--blue-dark); border: 1px solid var(--blue-mid); border-radius: 6px; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: background .2s; }
+  .btn-dl-individual:hover { background: var(--blue-mid); }
+  .sel-info { margin-top: 14px; font-size: 13px; color: var(--blue-dark); font-family: 'Montserrat', sans-serif; font-weight: 500; min-height: 18px; }
+  .progress { margin-top: 12px; font-size: 13px; color: var(--gray-text); min-height: 18px; }
+  .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; align-items: center; justify-content: center; }
+  .lightbox.ativo { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 85vh; object-fit: contain; border-radius: 8px; }
+  .lb-fechar { position: fixed; top: 20px; right: 28px; color: white; font-size: 32px; cursor: pointer; background: none; border: none; line-height: 1; font-family: 'Montserrat', sans-serif; }
+  .lb-nav { position: fixed; top: 50%; transform: translateY(-50%); color: white; font-size: 48px; cursor: pointer; background: none; border: none; padding: 10px; line-height: 1; font-family: 'Montserrat', sans-serif; opacity: 0.8; transition: opacity .2s; }
+  .lb-nav:hover { opacity: 1; }
+  .lb-prev { left: 16px; }
+  .lb-next { right: 16px; }
+  .lb-info { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); color: #ccc; font-size: 13px; font-family: 'Montserrat', sans-serif; white-space: nowrap; }
+  @media (max-width: 600px) { .header-badge { display: none; } .steps { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <img class="header-logo" src="logo.png" alt="Danone" />
+    <div class="header-text">
+      <h1>Perfect Store Online — Download de Imagens</h1>
+      <p>Danone Brasil · Sistema de Download de Imagens e Informações de Produtos</p>
+    </div>
+    <div class="header-badge">Uso Interno</div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="instrucoes">
+    <h2>Como usar</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><p>Digite o <strong>código EAN</strong> ou o <strong>nome do produto</strong> no campo de busca.</p></div>
+      <div class="step"><div class="step-num">2</div><p>Veja as <strong>informações do produto</strong> e suas imagens cadastradas.</p></div>
+      <div class="step"><div class="step-num">3</div><p>Selecione as imagens desejadas ou baixe <strong>todas em ZIP</strong>.</p></div>
+      <div class="step"><div class="step-num">4</div><p>Defina <strong>dimensões</strong> e <strong>formato</strong> de saída antes de baixar, se necessário.</p></div>
+    </div>
+    <div class="dica-box">
+      💡 <strong>Com "Manter proporção" marcado:</strong> a imagem é redimensionada proporcionalmente e centralizada no canvas com fundo branco — sem distorção. Exemplo: uma imagem 2008×827 exportada em 1000×1000 ficará com bordas brancas nas laterais.<br>
+      <strong>Sem "Manter proporção":</strong> a imagem é esticada para preencher exatamente as dimensões definidas.
+    </div>
+  </div>
+
+  <div class="search-card">
+    <label for="busca-input">Buscar produto</label>
+    <div class="search-row">
+      <input id="busca-input" type="text" placeholder="Digite o EAN ou nome do produto"
+        oninput="filtrarBusca(this.value)"
+        onkeydown="navegarAutoComplete(event)"
+        autocomplete="off" />
+      <button class="btn-buscar" id="btn-buscar" onclick="buscar()">Buscar</button>
+    </div>
+    <div class="autocomplete-lista" id="autocomplete-lista" style="display:none"></div>
+    <div id="status"></div>
+    <div class="resize-box" id="resize-box">
+      <p>Opções de download (opcionais)</p>
+      <div class="resize-grupo">
+        <div class="resize-linha">
+          <span>Largura:</span>
+          <input type="number" id="resize-w" placeholder="ex: 1000" min="10" max="5000" />
+          <span class="px-label">px</span>
+        </div>
+        <div class="resize-linha">
+          <span>Altura:</span>
+          <input type="number" id="resize-h" placeholder="ex: 1000" min="10" max="5000" />
+          <span class="px-label">px</span>
+        </div>
+        <div class="check-row">
+          <input type="checkbox" id="manter-proporcao" checked />
+          <label for="manter-proporcao">Manter proporção original (sem distorção)</label>
+        </div>
+        <div class="resize-modo-hint" id="resize-modo-hint">
+          ✅ Com proporção mantida: a imagem caberá dentro das dimensões definidas, centralizada com fundo branco.
+        </div>
+      </div>
+      <div class="formato-row">
+        <span>Formato de saída:</span>
+        <select id="formato-saida" class="formato-select">
+          <option value="original">Original (sem conversão)</option>
+          <option value="image/jpeg">JPG</option>
+          <option value="image/png">PNG</option>
+          <option value="image/webp">WebP</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="results-card" id="results-card">
+    <div class="results-header">
+      <div class="results-title" id="results-title">Imagens encontradas</div>
+      <div class="results-actions">
+        <button class="btn-select-all" id="btn-select-all" onclick="toggleSelecionarTodos()">Selecionar todas</button>
+        <button class="btn-baixar-sel" id="btn-baixar-sel" onclick="baixarSelecionadas()">Baixar selecionadas (0)</button>
+        <button class="btn-baixar-todos" id="btn-baixar-todos" onclick="baixarZipLista(arquivos)">Baixar todas como ZIP</button>
+      </div>
+    </div>
+    <div id="preview" class="preview-grid"></div>
+    <div class="sel-info" id="sel-info"></div>
+    <div class="progress" id="progress"></div>
+  </div>
+
+  <div class="produto-info" id="produto-info">
+    <div class="produto-info-header">
+      <div class="produto-ean-badge" id="produto-ean-badge"></div>
+    </div>
+    <div class="produto-campos" id="produto-campos"></div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <button class="lb-fechar" onclick="fecharLightbox()">&#215;</button>
+  <button class="lb-nav lb-prev" onclick="navegarLightbox(-1)">&#8249;</button>
+  <img id="lb-img" src="" alt="" />
+  <button class="lb-nav lb-next" onclick="navegarLightbox(1)">&#8250;</button>
+  <div class="lb-info" id="lb-info"></div>
+</div>
+
+<script>
+var GITHUB_USUARIO = 'eltonfranklinsilva';
+var GITHUB_REPO = 'imagens-ean';
+var GITHUB_RAW = 'https://raw.githubusercontent.com/' + GITHUB_USUARIO + '/' + GITHUB_REPO + '/main';
+var GITHUB_API = 'https://api.github.com/repos/' + GITHUB_USUARIO + '/' + GITHUB_REPO + '/contents';
+
+var arquivos = [];
+var selecionadas = new Set();
+var lbIndex = 0;
+var todosSelecionados = false;
+var catalogo = [];
+var acIndex = -1;
+var eanAtual = '';
+
+fetch('catalogo.json')
+  .then(function(r) { return r.json(); })
+  .then(function(data) { catalogo = data; })
+  .catch(function() { catalogo = []; });
+
+// Atualiza o hint quando o checkbox muda
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('manter-proporcao').addEventListener('change', function() {
+    var hint = document.getElementById('resize-modo-hint');
+    if (this.checked) {
+      hint.textContent = '✅ Com proporção mantida: a imagem caberá dentro das dimensões definidas, centralizada com fundo branco.';
+    } else {
+      hint.textContent = '⚠️ Sem proporção: a imagem será esticada para preencher exatamente as dimensões definidas.';
+    }
+  });
+});
+
+function limparResultados() {
+  document.getElementById('results-card').style.display = 'none';
+  document.getElementById('produto-info').style.display = 'none';
+  document.getElementById('resize-box').style.display = 'none';
+  document.getElementById('preview').innerHTML = '';
+  document.getElementById('progress').textContent = '';
+  document.getElementById('sel-info').textContent = '';
+  document.getElementById('formato-saida').value = 'original';
+  document.getElementById('resize-w').value = '';
+  document.getElementById('resize-h').value = '';
+  document.getElementById('manter-proporcao').checked = true;
+  document.getElementById('resize-modo-hint').textContent = '✅ Com proporção mantida: a imagem caberá dentro das dimensões definidas, centralizada com fundo branco.';
+  arquivos = [];
+  selecionadas.clear();
+  todosSelecionados = false;
+  eanAtual = '';
+  setStatus('', '');
+}
+
+function filtrarBusca(valor) {
+  acIndex = -1;
+  var lista = document.getElementById('autocomplete-lista');
+  if (!valor || valor.length < 2) { lista.style.display = 'none'; return; }
+  var soNumeros = /^\d+$/.test(valor.trim());
+  if (soNumeros) { lista.style.display = 'none'; return; }
+  var termo = valor.toLowerCase().trim();
+  var palavras = termo.split(/\s+/);
+  var resultados = catalogo.filter(function(p) {
+    var texto = (p.nome + ' ' + (p.titulo_completo || '')).toLowerCase();
+    return palavras.every(function(w) { return texto.includes(w); });
+  }).slice(0, 15);
+  if (!resultados.length) {
+    lista.innerHTML = '<div class="autocomplete-vazio">Nenhum produto encontrado</div>';
+    lista.style.display = 'block';
+    return;
+  }
+  lista.innerHTML = '';
+  resultados.forEach(function(p) {
+    var item = document.createElement('div');
+    item.className = 'autocomplete-item';
+    item.innerHTML =
+      '<div class="autocomplete-nome">' + (p.titulo_completo || p.nome) + '</div>' +
+      '<div class="autocomplete-sub">' + p.nome + ' <span class="autocomplete-ean">EAN: ' + p.ean + '</span></div>';
+    item.onclick = function() { selecionarProduto(p); };
+    lista.appendChild(item);
+  });
+  lista.style.display = 'block';
+}
+
+function navegarAutoComplete(e) {
+  var lista = document.getElementById('autocomplete-lista');
+  var itens = lista.querySelectorAll('.autocomplete-item');
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (itens.length && acIndex >= 0) { itens[acIndex].click(); return; }
+    buscar(); return;
+  }
+  if (!itens.length) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); acIndex = Math.min(acIndex+1, itens.length-1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acIndex = Math.max(acIndex-1, 0); }
+  else if (e.key === 'Escape') { lista.style.display = 'none'; return; }
+  itens.forEach(function(el, i) { el.classList.toggle('ativo', i === acIndex); });
+}
+
+function selecionarProduto(p) {
+  document.getElementById('busca-input').value = p.titulo_completo || p.nome;
+  document.getElementById('autocomplete-lista').style.display = 'none';
+  buscarPorEan(p.ean, p);
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-card')) document.getElementById('autocomplete-lista').style.display = 'none';
+});
+
+function setStatus(msg, tipo) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = tipo;
+}
+
+function buscar() {
+  var valor = document.getElementById('busca-input').value.trim();
+  if (!valor) { setStatus('Digite um EAN ou nome do produto.', 'erro'); return; }
+  document.getElementById('autocomplete-lista').style.display = 'none';
+  var soNumeros = /^\d+$/.test(valor);
+  if (soNumeros) {
+    var produto = catalogo.find(function(p) { return p.ean === valor; });
+    buscarPorEan(valor, produto || null);
+  } else {
+    var termo = valor.toLowerCase();
+    var encontrado = catalogo.find(function(p) {
+      return (p.nome + ' ' + (p.titulo_completo || '')).toLowerCase().includes(termo);
+    });
+    if (encontrado) {
+      buscarPorEan(encontrado.ean, encontrado);
+    } else {
+      setStatus('❌ Nenhum produto encontrado para "' + valor + '"', 'erro');
+    }
+  }
+}
+
+function exibirInfoProduto(ean, produto) {
+  var card = document.getElementById('produto-info');
+  var badge = document.getElementById('produto-ean-badge');
+  var campos = document.getElementById('produto-campos');
+  if (!produto) { card.style.display = 'none'; return; }
+  badge.textContent = 'EAN: ' + ean;
+  campos.innerHTML = '';
+  function criarCampo(label, valor, tipo, expandivel) {
+    if (!valor) return null;
+    var div = document.createElement('div');
+    div.className = 'campo' + (tipo ? ' campo-' + tipo : '') + (expandivel ? ' campo-expandivel' : '');
+    if (expandivel) {
+      var header = document.createElement('div');
+      header.className = 'campo-header';
+      var lbl = document.createElement('div');
+      lbl.className = 'campo-label';
+      lbl.textContent = label;
+      var seta = document.createElement('span');
+      seta.className = 'campo-seta';
+      seta.textContent = '▼';
+      header.appendChild(lbl);
+      header.appendChild(seta);
+      header.onclick = function() { div.classList.toggle('aberto'); };
+      div.appendChild(header);
+    } else {
+      var lbl = document.createElement('div');
+      lbl.className = 'campo-label';
+      lbl.textContent = label;
+      div.appendChild(lbl);
+    }
+    var val = document.createElement('div');
+    val.className = 'campo-valor';
+    val.textContent = valor;
+    div.appendChild(val);
+    return div;
+  }
+  var c1 = criarCampo('Titulo completo', produto.titulo_completo, 'titulo-completo', false);
+  var c2 = criarCampo('Titulo reduzido', produto.titulo_reduzido, 'titulo-reduzido', false);
+  var c3 = criarCampo('Descricao rapida', produto.descricao_rapida, null, true);
+  var c4 = criarCampo('Descricao longa', produto.descricao_longa, null, true);
+  if (c1) campos.appendChild(c1);
+  if (c2) campos.appendChild(c2);
+  if (c3) campos.appendChild(c3);
+  if (c4) campos.appendChild(c4);
+  card.style.display = campos.children.length > 0 ? 'block' : 'none';
+}
+
+function buscarPorEan(ean, produto) {
+  limparResultados();
+  var btn = document.getElementById('btn-buscar');
+  if (btn) btn.disabled = true;
+  eanAtual = ean;
+  setStatus('Buscando imagens para o EAN ' + ean + '...', '');
+  fetch(GITHUB_API + '/' + encodeURIComponent(ean), {
+    headers: { 'Accept': 'application/vnd.github+json' }
+  })
+  .then(function(r) {
+    if (r.status === 404) throw new Error('Nenhuma imagem encontrada para o EAN ' + ean);
+    if (r.status === 403) throw new Error('Limite da API do GitHub atingido. Tente novamente em alguns minutos.');
+    return r.json();
+  })
+  .then(function(data) {
+    if (!Array.isArray(data)) throw new Error('Nenhuma imagem encontrada para o EAN ' + ean);
+    var imagens = data.filter(function(f) {
+      return f.name && f.name.match(/\.(jpg|jpeg|png|webp|gif)$/i);
+    }).sort(function(a, b) {
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    });
+    if (!imagens.length) throw new Error('Nenhuma imagem encontrada para o EAN ' + ean);
+    arquivos = imagens.map(function(f) {
+      return { nome: f.name, url: GITHUB_RAW + '/' + ean + '/' + encodeURIComponent(f.name) };
+    });
+    setStatus('', '');
+    var titulo = produto && produto.titulo_completo
+      ? produto.titulo_completo + ' · ' + arquivos.length + ' imagem(ns)'
+      : arquivos.length + ' imagem(ns) encontrada(s) — EAN ' + ean;
+    document.getElementById('results-title').textContent = titulo;
+    document.getElementById('results-card').style.display = 'block';
+    document.getElementById('resize-box').style.display = 'block';
+    document.getElementById('btn-baixar-sel').style.display = 'none';
+    document.getElementById('btn-select-all').textContent = 'Selecionar todas';
+    var grid = document.getElementById('preview');
+    grid.innerHTML = '';
+    arquivos.forEach(function(f, idx) {
+      var card = document.createElement('div');
+      card.className = 'img-card';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.className = 'img-checkbox';
+      cb.onclick = function(e) { e.stopPropagation(); toggleImagem(idx); };
+      var wrap = document.createElement('div');
+      wrap.className = 'img-wrap';
+      wrap.onclick = function() { abrirLightbox(idx); };
+      var img = document.createElement('img');
+      img.alt = f.nome;
+      var dimEl = document.createElement('div');
+      dimEl.className = 'img-dim'; dimEl.textContent = '...';
+      img.onload = function() { dimEl.textContent = img.naturalWidth + ' x ' + img.naturalHeight + ' px'; };
+      img.onerror = function() { wrap.innerHTML = '<span class="loader">erro</span>'; };
+      img.src = f.url;
+      var overlay = document.createElement('div');
+      overlay.className = 'overlay';
+      overlay.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>';
+      wrap.appendChild(img); wrap.appendChild(overlay);
+      var info = document.createElement('div'); info.className = 'img-info';
+      var nomeEl = document.createElement('div'); nomeEl.className = 'img-nome';
+      nomeEl.textContent = f.nome; nomeEl.title = f.nome;
+      info.appendChild(nomeEl); info.appendChild(dimEl);
+      var actions = document.createElement('div'); actions.className = 'img-actions';
+      var btnDl = document.createElement('button'); btnDl.className = 'btn-dl-individual';
+      btnDl.textContent = 'Baixar esta imagem';
+      btnDl.onclick = function(e) { e.stopPropagation(); baixarIndividual(f); };
+      actions.appendChild(btnDl);
+      card.appendChild(cb); card.appendChild(wrap); card.appendChild(info); card.appendChild(actions);
+      grid.appendChild(card);
+    });
+    exibirInfoProduto(ean, produto);
+  })
+  .catch(function(e) {
+    setStatus('❌ ' + e.message, 'erro');
+    exibirInfoProduto(ean, produto);
+  })
+  .finally(function() { if (btn) btn.disabled = false; });
+}
+
+function atualizarSelInfo() {
+  var n = selecionadas.size;
+  document.getElementById('sel-info').textContent = n > 0 ? n + ' imagem(ns) selecionada(s)' : '';
+  var btn = document.getElementById('btn-baixar-sel');
+  btn.textContent = 'Baixar selecionadas (' + n + ')';
+  btn.style.display = n > 0 ? 'block' : 'none';
+}
+
+function toggleSelecionarTodos() {
+  todosSelecionados = !todosSelecionados;
+  selecionadas.clear();
+  document.querySelectorAll('.img-card').forEach(function(card, idx) {
+    var cb = card.querySelector('.img-checkbox');
+    if (todosSelecionados) { selecionadas.add(idx); cb.checked = true; card.classList.add('selecionada'); }
+    else { cb.checked = false; card.classList.remove('selecionada'); }
+  });
+  document.getElementById('btn-select-all').textContent = todosSelecionados ? 'Desmarcar todas' : 'Selecionar todas';
+  atualizarSelInfo();
+}
+
+function toggleImagem(idx) {
+  var cards = document.querySelectorAll('.img-card');
+  var card = cards[idx];
+  var cb = card.querySelector('.img-checkbox');
+  if (selecionadas.has(idx)) { selecionadas.delete(idx); cb.checked = false; card.classList.remove('selecionada'); }
+  else { selecionadas.add(idx); cb.checked = true; card.classList.add('selecionada'); }
+  todosSelecionados = selecionadas.size === arquivos.length;
+  document.getElementById('btn-select-all').textContent = todosSelecionados ? 'Desmarcar todas' : 'Selecionar todas';
+  atualizarSelInfo();
+}
+
+function getResize() {
+  var w = parseInt(document.getElementById('resize-w').value) || 0;
+  var h = parseInt(document.getElementById('resize-h').value) || 0;
+  var manter = document.getElementById('manter-proporcao').checked;
+  return { w: w, h: h, manter: manter };
+}
+
+function getFormato() {
+  return document.getElementById('formato-saida').value;
+}
+
+function extensaoPorMime(mime) {
+  var map = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+  return map[mime] || null;
+}
+
+function nomeComFormato(nomeOriginal, mime) {
+  if (!mime || mime === 'original') return nomeOriginal;
+  var ext = extensaoPorMime(mime);
+  if (!ext) return nomeOriginal;
+  return nomeOriginal.replace(/\.[^.]+$/, '') + '.' + ext;
+}
+
+function redimensionarBlob(blob, w, h, manter, formatoMime) {
+  return new Promise(function(resolve) {
+    var precisaCanvas = (w || h || (formatoMime && formatoMime !== 'original'));
+    if (!precisaCanvas) { resolve({ blob: blob, mime: null }); return; }
+
+    var url = URL.createObjectURL(blob);
+    var img = new Image();
+    img.onload = function() {
+      try {
+        var sw = img.naturalWidth;
+        var sh = img.naturalHeight;
+
+        // Resolve o mime de saída
+        var mime;
+        if (formatoMime && formatoMime !== 'original') {
+          mime = formatoMime;
+        } else if (blob.type && blob.type.startsWith('image/')) {
+          mime = blob.type;
+        } else {
+          mime = 'image/jpeg';
+        }
+
+        // Dimensões do canvas de saída
+        // Se só uma dimensão foi informada, o canvas tem esse tamanho em ambas (quadrado)
+        // Se nenhuma foi informada, usa o tamanho original
+        var tw = w || (h ? h : sw);
+        var th = h || (w ? w : sh);
+
+        var canvas = document.createElement('canvas');
+        canvas.width = tw;
+        canvas.height = th;
+        var ctx = canvas.getContext('2d');
+
+        // Fundo branco sempre (necessário para JPG e para letterbox)
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, tw, th);
+
+        if (manter) {
+          // Fit proporcional: a imagem cabe inteira dentro do canvas, centralizada
+          var escala = Math.min(tw / sw, th / sh);
+          var dw = Math.round(sw * escala);
+          var dh = Math.round(sh * escala);
+          var dx = Math.round((tw - dw) / 2);
+          var dy = Math.round((th - dh) / 2);
+          ctx.drawImage(img, dx, dy, dw, dh);
+        } else {
+          // Sem proporção: estica para preencher todo o canvas
+          ctx.drawImage(img, 0, 0, tw, th);
+        }
+
+        URL.revokeObjectURL(url);
+        canvas.toBlob(function(b) {
+          resolve({ blob: b || blob, mime: mime });
+        }, mime, 0.92);
+      } catch(e) {
+        URL.revokeObjectURL(url);
+        resolve({ blob: blob, mime: null });
+      }
+    };
+    img.onerror = function() {
+      URL.revokeObjectURL(url);
+      resolve({ blob: blob, mime: null });
+    };
+    img.src = url;
+  });
+}
+
+function baixarIndividual(f) {
+  var resize = getResize();
+  var formato = getFormato();
+  fetch(f.url)
+    .then(function(r) { return r.blob(); })
+    .then(function(blob) { return redimensionarBlob(blob, resize.w, resize.h, resize.manter, formato); })
+    .then(function(result) {
+      var nomeDownload = nomeComFormato(f.nome, formato !== 'original' ? formato : null);
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(result.blob);
+      a.download = nomeDownload; a.click();
+      setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+    })
+    .catch(function(e) { alert('Erro ao baixar: ' + e.message); });
+}
+
+function baixarSelecionadas() {
+  var lista = arquivos.filter(function(_, i) { return selecionadas.has(i); });
+  if (!lista.length) return;
+  baixarZipLista(lista);
+}
+
+function baixarZipLista(lista) {
+  if (!lista.length) return;
+  var ean = eanAtual || 'imagens';
+  var btnTodos = document.getElementById('btn-baixar-todos');
+  var btnSel = document.getElementById('btn-baixar-sel');
+  var prog = document.getElementById('progress');
+  var resize = getResize();
+  var formato = getFormato();
+  btnTodos.disabled = true; btnSel.disabled = true;
+  btnTodos.textContent = 'Preparando ZIP...';
+  var zip = new JSZip();
+  var pasta = zip.folder(ean);
+  var i = 0;
+  function baixarProximo() {
+    if (i >= lista.length) {
+      prog.textContent = 'Gerando arquivo ZIP...';
+      zip.generateAsync({ type: 'blob' }).then(function(content) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(content);
+        a.download = ean + '_imagens.zip'; a.click();
+        setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+        btnTodos.textContent = 'Baixar todas como ZIP';
+        btnTodos.disabled = false; btnSel.disabled = false;
+        prog.textContent = lista.length + ' imagem(ns) baixada(s) com sucesso.';
+        setTimeout(function() { prog.textContent = ''; }, 4000);
+      });
+      return;
+    }
+    var f = lista[i];
+    prog.textContent = 'Baixando imagem ' + (i+1) + ' de ' + lista.length + '...';
+    fetch(f.url)
+      .then(function(r) { return r.blob(); })
+      .then(function(blob) { return redimensionarBlob(blob, resize.w, resize.h, resize.manter, formato); })
+      .then(function(result) {
+        var nomeArquivo = nomeComFormato(f.nome, formato !== 'original' ? formato : null);
+        pasta.file(nomeArquivo, result.blob);
+        i++; baixarProximo();
+      })
+      .catch(function(e) {
+        alert('Erro no download: ' + e.message);
+        btnTodos.textContent = 'Baixar todas como ZIP';
+        btnTodos.disabled = false; btnSel.disabled = false;
+      });
+  }
+  baixarProximo();
+}
+
+function abrirLightbox(idx) {
+  lbIndex = idx;
+  atualizarLightbox();
+  document.getElementById('lightbox').classList.add('ativo');
+  document.onkeydown = function(e) {
+    if (e.key === 'ArrowRight') navegarLightbox(1);
+    if (e.key === 'ArrowLeft') navegarLightbox(-1);
+    if (e.key === 'Escape') fecharLightbox();
+  };
+}
+
+function atualizarLightbox() {
+  var f = arquivos[lbIndex];
+  document.getElementById('lb-img').src = f.url;
+  document.getElementById('lb-info').textContent = f.nome + '  (' + (lbIndex+1) + ' de ' + arquivos.length + ')';
+}
+
+function navegarLightbox(dir) {
+  lbIndex = (lbIndex + dir + arquivos.length) % arquivos.length;
+  atualizarLightbox();
+}
+
+function fecharLightbox() {
+  document.getElementById('lightbox').classList.remove('ativo');
+  document.onkeydown = null;
+}
+</script>
+</body>
+</html>
