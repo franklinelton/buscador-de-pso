@@ -47,10 +47,13 @@ Baixar todas em ZIP
 (Opcional) Defina dimensões e formato antes de baixar
 
 ## Como configurar para uso próprio
+**0. Crie um repositório no próprio GitHub**
+
+Fique a vontade para chamar de Buscador de PSO, Sistema de PSO ou o que preferir.
 
 **1. Prepare suas imagens**
 
-Reuna suas imagens em pastas preferencialmente nomeadas pelo EAN de cada produto, onde cada imagem esteja indicando a posição em que deve ser executada na Página de Descrição do Produto (PDP). Depois disso, suba em um diretório público no github nomeado "imagens-ean", assim o código do buscador não precisa ser alterado.
+Reuna suas imagens em pastas preferencialmente nomeadas pelo EAN de cada produto, onde cada imagem esteja indicando a posição em que deve ser executada na Página de Descrição do Produto (PDP). Depois disso, suba em um novo repositório público no github nomeado "imagens-ean", assim o código do buscador não precisa ser alterado.
 > Dependendo do número de pastas, pode ser necessário uma automação para upload no github. Utilize a IA para te dar esse passo a passo.
 
 **2. Crie um arquivo json com seu catalogo**
@@ -69,10 +72,12 @@ Salve o logo como "YourLogoHere.png" para que o código incorpore a imagem no ht
 
 **5. Aguarde alguns minutos e teste**
 
+Clique em Settings --> Pages --> Branch --> selecione Main --> Selecione /root --> clique em Save. Após alguns minutos na parte superior da tela terá o link da sua aplicação web no formato: https://SEU_USUÁRIO.github.io/NOME_DO_REPOSITÓRIO/
+
 ## Feito com vibecoding 🤖
 
 Não sou desenvolvedor. Construí isso usando IA como ferramenta de desenvolvimento.
 
 Usei IA para estruturar lógica, interface e resolver problemas práticos do dia a dia.
 
-Se eu consegui transformar uma dor real em uma ferramenta funcional, você também consegue.
+Se eu consegui transformar uma dor real em uma ferramenta funcional, você também consegue. Dúvidas, entre em contato!
